@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-     origin: "http://localhost:5173",
+     origin: "https://survey-form-1-w92u.onrender.com",
      methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
 })
