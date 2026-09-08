@@ -12,8 +12,6 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user",
-    adminCode: "",
   });
 
   const [error, setError] = useState("");
@@ -21,11 +19,7 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -40,25 +34,17 @@ const Register = () => {
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
-        role: formData.role,
-        adminCode: formData.adminCode,
       });
 
       toast.success("Account created successfully");
-
-      if (response.data.user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate("/survey");
     } catch (error) {
       const message =
-        error.response?.data?.message ||
-        "Unable to create account";
+        error.response?.data?.message || "Unable to create account";
 
       setError(message);
       toast.error(message);
@@ -70,24 +56,15 @@ const Register = () => {
   return (
     <AuthLayout type="register">
       <div>
-        <h2 className="text-3xl font-bold">
-          Create your account
-        </h2>
-
+        <h2 className="text-3xl font-bold">Create your account</h2>
         <p className="mt-2 text-gray-400">
-          Start your journey with Honelogix.
+          Create an account to submit and manage your survey.
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-8 space-y-5"
-      >
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div>
-          <label className="text-sm text-gray-300">
-            Full Name
-          </label>
-
+          <label className="text-sm text-gray-300">Full Name</label>
           <input
             type="text"
             name="fullName"
@@ -100,10 +77,7 @@ const Register = () => {
         </div>
 
         <div>
-          <label className="text-sm text-gray-300">
-            Email address
-          </label>
-
+          <label className="text-sm text-gray-300">Email address</label>
           <input
             type="email"
             name="email"
@@ -115,46 +89,9 @@ const Register = () => {
           />
         </div>
 
-        <div>
-          <label className="text-sm text-gray-300">
-            Account Type
-          </label>
-
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="auth-input"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-
-        {formData.role === "admin" && (
-          <div>
-            <label className="text-sm text-gray-300">
-              Admin Code
-            </label>
-
-            <input
-              type="password"
-              name="adminCode"
-              value={formData.adminCode}
-              onChange={handleChange}
-              placeholder="Enter admin code"
-              className="auth-input"
-              required
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm text-gray-300">
-              Password
-            </label>
-
+            <label className="text-sm text-gray-300">Password</label>
             <input
               type="password"
               name="password"
@@ -163,14 +100,12 @@ const Register = () => {
               placeholder="••••••••"
               className="auth-input"
               required
+              minLength={6}
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-300">
-              Confirm Password
-            </label>
-
+            <label className="text-sm text-gray-300">Confirm Password</label>
             <input
               type="password"
               name="confirmPassword"
@@ -179,15 +114,12 @@ const Register = () => {
               placeholder="••••••••"
               className="auth-input"
               required
+              minLength={6}
             />
           </div>
         </div>
 
-        {error && (
-          <p className="text-sm text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button
           type="submit"

@@ -2,19 +2,19 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-const createToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+const createToken = (payload) => {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
 };
 
 const setTokenCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.cookie("token", token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
@@ -22,13 +22,7 @@ const setTokenCookie = (res, token) => {
 
 export const register = async (req, res) => {
   try {
-    const {
-      fullName,
-      email,
-      password,
-      role,
-      adminCode,
-    } = req.body;
+    const { fullName, email, password } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({
@@ -40,28 +34,6 @@ export const register = async (req, res) => {
       return res.status(400).json({
         message: "Password must be at least 6 characters",
       });
-    }
-
-    const selectedRole = role || "user";
-
-    if (!["user", "admin"].includes(selectedRole)) {
-      return res.status(400).json({
-        message: "Invalid role",
-      });
-    }
-
-    if (selectedRole === "admin") {
-      if (!adminCode) {
-        return res.status(400).json({
-          message: "Admin code is required",
-        });
-      }
-
-      if (adminCode !== process.env.ADMIN_CODE) {
-        return res.status(403).json({
-          message: "Invalid admin code",
-        });
-      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -78,10 +50,13 @@ export const register = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
-      role: selectedRole,
+      role: "user",
     });
 
-    const token = createToken(user._id);
+    const token = createToken({
+      userId: user._id.toString(),
+      role: "user",
+    });
 
     setTokenCookie(res, token);
 
@@ -113,6 +88,29 @@ export const login = async (req, res) => {
       });
     }
 
+    if (
+      email.trim().toLowerCase() === process.env.ADMIN_EMAIL?.trim().toLowerCase() &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const token = createToken({
+        userId: process.env.HARD_CODED_ADMIN_ID,
+        role: "admin",
+        isHardcodedAdmin: true,
+      });
+
+      setTokenCookie(res, token);
+
+      return res.json({
+        message: "Login successful",
+        user: {
+          id: process.env.HARD_CODED_ADMIN_ID,
+          fullName: "Honelogix Admin",
+          email: process.env.ADMIN_EMAIL,
+          role: "admin",
+        },
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -132,7 +130,10 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = createToken(user._id);
+    const token = createToken({
+      userId: user._id.toString(),
+      role: user.role,
+    });
 
     setTokenCookie(res, token);
 
@@ -169,9 +170,18 @@ export const logout = (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select(
-      "-password"
-    );
+    if (req.user?.isHardcodedAdmin) {
+      return res.json({
+        user: {
+          id: process.env.HARD_CODED_ADMIN_ID,
+          fullName: "Honelogix Admin",
+          email: process.env.ADMIN_EMAIL,
+          role: "admin",
+        },
+      });
+    }
+
+    const user = await User.findById(req.user.userId).select("-password");
 
     if (!user) {
       return res.status(404).json({

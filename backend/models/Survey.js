@@ -56,6 +56,12 @@ const surveySchema = new mongoose.Schema(
       trim: true,
     },
 
+    status: {
+      type: String,
+      enum: ["Pending", "In Progress", "Successful", "Rejected"],
+      default: "Pending",
+    },
+
     addedBy: {
       type: String,
       enum: ["user", "admin"],

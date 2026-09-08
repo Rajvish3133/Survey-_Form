@@ -82,9 +82,28 @@ export const getMySurvey = async (req, res) => {
 
 export const updateMySurvey = async (req, res) => {
   try {
+    const allowedFields = [
+      "name",
+      "email",
+      "mobile",
+      "categoryOfWork",
+      "aboutUs",
+      "workExperience",
+      "caste",
+      "subCaste",
+    ];
+
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
     const survey = await Survey.findOneAndUpdate(
       { user: req.user.userId },
-      req.body,
+      updates,
       {
         new: true,
         runValidators: true,
@@ -102,6 +121,8 @@ export const updateMySurvey = async (req, res) => {
       survey,
     });
   } catch (error) {
+    console.error(error);
+
     return res.status(500).json({
       message: "Unable to update survey",
     });
@@ -146,9 +167,40 @@ export const getSurveyById = async (req, res) => {
 
 export const updateSurveyByAdmin = async (req, res) => {
   try {
+    const allowedFields = [
+      "name",
+      "email",
+      "mobile",
+      "categoryOfWork",
+      "aboutUs",
+      "workExperience",
+      "caste",
+      "subCaste",
+      "status",
+    ];
+
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    if (
+      updates.status !== undefined &&
+      !["Pending", "In Progress", "Successful", "Rejected"].includes(
+        updates.status
+      )
+    ) {
+      return res.status(400).json({
+        message: "Invalid survey status",
+      });
+    }
+
     const survey = await Survey.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updates,
       {
         new: true,
         runValidators: true,
@@ -166,6 +218,8 @@ export const updateSurveyByAdmin = async (req, res) => {
       survey,
     });
   } catch (error) {
+    console.error(error);
+
     return res.status(500).json({
       message: "Unable to update survey",
     });
@@ -183,6 +237,7 @@ export const addSurveyByAdmin = async (req, res) => {
       workExperience,
       caste,
       subCaste,
+      status,
     } = req.body;
 
     if (
@@ -208,6 +263,7 @@ export const addSurveyByAdmin = async (req, res) => {
       workExperience,
       caste,
       subCaste,
+      status: status || "Pending",
       addedBy: "admin",
     });
 

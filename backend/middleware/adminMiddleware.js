@@ -2,6 +2,18 @@ import User from "../models/User.js";
 
 const adminMiddleware = async (req, res, next) => {
   try {
+
+    if (req.user?.isHardcodedAdmin && req.user?.role === "admin") {
+      req.user = {
+        _id: req.user.userId,
+        fullName: "Honelogix Admin",
+        email: process.env.ADMIN_EMAIL,
+        role: "admin",
+      };
+
+      return next();
+    }
+
     const user = await User.findById(req.user.userId);
 
     if (!user) {
@@ -17,7 +29,6 @@ const adminMiddleware = async (req, res, next) => {
     }
 
     req.user = user;
-
     next();
   } catch (error) {
     res.status(500).json({
